@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tidskoll arbetsplats</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --ink:#111827; --muted:#5b6472; --line:#e3e6ea;
+  --dark:#1f2937; --accent:#c2410c; --accent-bg:#fff1e8; --ok:#166534; --ok-bg:#ecfdf3; --blue:#1d4ed8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Arial,sans-serif;font-size:15px;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:980px;margin:0 auto;padding:16px 14px 80px}
+header.top{background:var(--dark);color:#fff}
+header.top .wrap{padding-top:14px;padding-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand small{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#cbd5e1;font-weight:600}
+.brand h1{margin:0;font-size:20px;font-weight:800}
+.iconbtn{background:transparent;border:1.5px solid #4b5563;color:#fff;border-radius:10px;min-height:44px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.iconbtn svg{width:18px;height:18px}
+.banner{border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
+.banner.warn{background:#fef3c7;color:#713f12}
+.banner.err{background:#fee2e2;color:#7f1d1d}
+.weeknav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.weeknav button{min-width:44px;min-height:44px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-size:20px;font-weight:700}
+.weeknav .wk{text-align:center}
+.weeknav .wk b{display:block;font-size:20px}
+.weeknav .wk span{color:var(--muted);font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.kpi .v{font-size:24px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi.loss .v{color:var(--accent)}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi .v{font-size:20px}}
+.tabs{display:flex;gap:6px;background:#e5e7eb;padding:4px;border-radius:12px;margin-bottom:14px}
+.tabs button{flex:1;min-height:42px;border:0;border-radius:9px;background:transparent;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px}
+.days button{flex:1 0 auto;min-width:64px;min-height:56px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 8px}
+.days button b{font-size:14px}
+.days button span{font-size:12px;color:var(--muted)}
+.days button[aria-pressed="true"]{background:var(--dark);border-color:var(--dark);color:#fff}
+.days button[aria-pressed="true"] span{color:#d1d5db}
+.days .dot{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;line-height:18px}
+.list{display:flex;flex-direction:column;gap:10px}
+.entry{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;text-align:left;width:100%}
+.entry .row1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.entry .co{font-weight:700;font-size:16px}
+.entry .pp{color:var(--muted);font-size:14px;font-weight:500}
+.times{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+@media (max-width:640px){.times{grid-template-columns:repeat(3,1fr)}}
+.times div{background:#f7f8fa;border-radius:8px;padding:6px 8px}
+.times small{display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase}
+.times b{font-size:16px;font-variant-numeric:tabular-nums}
+.times b.empty{color:#9aa1ab;font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13px;font-weight:600;border-radius:999px;padding:4px 10px;background:#eef1f5;color:#374151}
+.chip.bad{background:var(--accent-bg);color:var(--accent)}
+.chip.good{background:var(--ok-bg);color:var(--ok)}
+.entry .note{font-size:14px;color:var(--muted)}
+.empty-state{background:var(--card);border:1.5px dashed #cbd0d6;border-radius:14px;padding:26px;text-align:center;color:var(--muted)}
+.primary{background:var(--dark);color:#fff;border:0;border-radius:12px;min-height:48px;padding:0 18px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.secondary{background:var(--card);border:1.5px solid var(--line);border-radius:12px;min-height:48px;padding:0 18px;font-weight:600}
+.danger{background:#fff;border:1.5px solid #fca5a5;color:#b91c1c;border-radius:12px;min-height:48px;padding:0 18px;font-weight:600}
+.addbar{margin-top:12px;display:flex}
+.addbar .primary{flex:1}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.tablewrap{overflow-x:auto}
+table.sum{width:100%;border-collapse:collapse;font-size:14px;min-width:820px}
+table.sum th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding:8px;border-bottom:1.5px solid var(--line)}
+table.sum td{padding:10px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.sum td.n,table.sum th.n{text-align:right}
+table.sum tr.tot td{font-weight:800;border-top:2px solid var(--ink);border-bottom:0}
+td.lossv{color:var(--accent);font-weight:700}
+.sumhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.sumhead h2{margin:0;font-size:18px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.overlay.open{display:flex}
+@media (min-width:700px){.overlay{align-items:center}}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;max-height:92vh;overflow:auto;padding:18px 16px 20px}
+@media (min-width:700px){.sheet{border-radius:18px}}
+.sheet h2{margin:0 0 12px;font-size:18px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:13px;font-weight:600;color:#374151}
+.field input,.field textarea,.field select{border:1.5px solid #cfd4da;border-radius:10px;min-height:46px;padding:8px 12px;background:#fff;width:100%}
+.field textarea{min-height:70px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.timefield{display:flex;gap:6px}
+.timefield input{flex:1;min-width:0}
+.timefield button{min-width:56px;min-height:46px;border-radius:10px;border:1.5px solid #cfd4da;background:#f7f8fa;font-weight:700;font-size:13px}
+.sheet .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.sheet .actions .primary{flex:1}
+.hint{font-size:12px;color:var(--muted);margin-top:2px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--dark);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;display:none;max-width:90vw}
+.toast.show{display:block}
+.confirm{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px;margin-top:10px;display:none}
+.confirm.show{display:block}
+.confirm .actions{margin-top:8px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><small id="siteLabel">Arbetsplats</small><h1>Tidskoll</h1></div>
+    <button class="iconbtn" id="btnSettings" type="button" aria-label="Inställningar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Inställningar
+    </button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="banner"></div>
+
+  <div class="weeknav">
+    <button type="button" id="prevWeek" aria-label="Föregående vecka">‹</button>
+    <div class="wk"><b id="wkTitle">Vecka</b><span id="wkRange"></span></div>
+    <button type="button" id="nextWeek" aria-label="Nästa vecka">›</button>
+  </div>
+
+  <section class="kpis" aria-label="Veckans siffror">
+    <div class="kpi loss"><div class="l">Förlorad tid</div><div class="v" id="kLostH">–</div></div>
+    <div class="kpi loss"><div class="l">Förlust</div><div class="v" id="kLostKr">–</div></div>
+    <div class="kpi"><div class="l">Snitt lunch</div><div class="v" id="kAvgLunch">–</div></div>
+    <div class="kpi"><div class="l">Registreringar</div><div class="v" id="kCount">–</div></div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tabDay" aria-selected="true">Dag för dag</button>
+    <button type="button" role="tab" id="tabSum" aria-selected="false">Veckosammanställning</button>
+  </div>
+
+  <section id="viewDay">
+    <div class="days" id="days"></div>
+    <div class="list" id="list"></div>
+    <div class="addbar"><button class="primary" type="button" id="btnAdd">+ Lägg till företag</button></div>
+  </section>
+
+  <section id="viewSum" hidden>
+    <div class="card">
+      <div class="sumhead">
+        <h2>Per företag – hela veckan</h2>
+        <button class="primary" type="button" id="btnPdf">Ladda ner rapport (PDF)</button>
+      </div>
+      <div class="tablewrap"><table class="sum" id="sumTable"></table></div>
+      <p class="muted small" id="sumNote"></p>
+    </div>
+  </section>
+</main>
+
+<!-- Entry sheet -->
+<div class="overlay" id="entryOverlay">
+  <form class="sheet" id="entryForm" novalidate>
+    <h2 id="entryTitle">Lägg till</h2>
+    <div class="grid2">
+      <div class="field" style="grid-column:1 / -1">
+        <label for="fCo">Företag</label>
+        <input id="fCo" list="coList" autocomplete="off" required>
+        <datalist id="coList"></datalist>
+      </div>
+      <div class="field">
+        <label for="fN">Antal personer</label>
+        <input id="fN" type="number" min="1" step="1" inputmode="numeric" value="1">
+      </div>
+      <div class="field">
+        <label for="fDate">Datum</label>
+        <input id="fDate" type="date">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field" style="grid-column:1 / -1"><label for="fIn">Ankomst</label><div class="timefield"><input id="fIn" type="time"><button type="button" data-now="fIn">Nu</button></div></div>
+      <div class="field"><label for="fFo">Frukost ut</label><div class="timefield"><input id="fFo" type="time"><button type="button" data-now="fFo">Nu</button></div></div>
+      <div class="field"><label for="fFi">Frukost in</label><div class="timefield"><input id="fFi" type="time"><button type="button" data-now="fFi">Nu</button></div></div>
+      <div class="field"><label for="fLo">Lunch ut</label><div class="timefield"><input id="fLo" type="time"><button type="button" data-now="fLo">Nu</button></div></div>
+      <div class="field"><label for="fLi">Lunch in</label><div class="timefield"><input id="fLi" type="time"><button type="button" data-now="fLi">Nu</button></div></div>
+      <div class="field" style="grid-column:1 / -1"><label for="fOut">Hemgång</label><div class="timefield"><input id="fOut" type="time"><button type="button" data-now="fOut">Nu</button></div></div>
+    </div>
+    <div class="field"><label for="fNote">Kommentar</label><textarea id="fNote"></textarea></div>
+    <p class="hint">Du kan spara direkt vid ankomst och fylla i resten under dagen.</p>
+    <div class="actions">
+      <button class="primary" type="submit">Spara</button>
+      <button class="secondary" type="button" id="btnCancel">Avbryt</button>
+      <button class="danger" type="button" id="btnDelete" hidden>Ta bort</button>
+    </div>
+    <div class="confirm" id="delConfirm">
+      <b>Ta bort raden?</b> <span class="muted small">Det går inte att ångra.</span>
+      <div class="actions">
+        <button class="danger" type="button" id="btnDelYes">Ja, ta bort</button>
+        <button class="secondary" type="button" id="btnDelNo">Nej</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Settings sheet -->
+<div class="overlay" id="setOverlay">
+  <form class="sheet" id="setForm" novalidate>
+    <h2>Inställningar</h2>
+    <div class="field"><label for="sSite">Arbetsplats / projekt</label><input id="sSite" placeholder="T.ex. Kv. Eken, Ystad"></div>
+    <div class="grid2">
+      <div class="field"><label for="sFrukost">Avtalad frukost (min)</label><input id="sFrukost" type="number" min="0" step="5" inputmode="numeric"></div>
+      <div class="field"><label for="sLunch">Avtalad lunch (min)</label><input id="sLunch" type="number" min="0" step="5" inputmode="numeric"></div>
+      <div class="field" style="grid-column:1 / -1"><label for="sRate">Timkostnad (kr/h per person)</label><input id="sRate" type="number" min="0" step="10" inputmode="numeric"></div>
+      <div class="field"><label for="sStart">Arbetsdagen börjar</label><input id="sStart" type="time"></div>
+      <div class="field"><label for="sEnd">Arbetsdagen slutar</label><input id="sEnd" type="time"></div>
+    </div>
+    <p class="hint">Förlust = minuter över avtalad frukost och lunch + sen ankomst + tidig hemgång, gånger antal personer. Lämna start/slut tomma om bara lunchen ska räknas. Ändringar gäller alla som använder appen.</p>
+    <div class="actions">
+      <button class="primary" type="submit">Spara</button>
+      <button class="secondary" type="button" id="btnSetCancel">Avbryt</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  const DAYS=["Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag","Söndag"];
+  const DAYS_S=["Mån","Tis","Ons","Tor","Fre","Lör","Sön"];
+  const MONTHS=["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+  const DEFAULTS={site:"",frukost:15,lunch:30,rate:0,start:"",end:""};
+
+  let db=null, settings={...DEFAULTS}, entries=[], loaded=false, canWrite=true;
+  let monday=startOfWeek(new Date()), dayIdx=todayIdx(), view="day", editingId=null;
+
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  function startOfWeek(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const wd=(x.getDay()+6)%7;x.setDate(x.getDate()-wd);return x;}
+  function todayIdx(){return (new Date().getDay()+6)%7;}
+  function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+  function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function parseIso(s){const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);}
+  function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-n+3);const f=new Date(Date.UTC(t.getUTCFullYear(),0,4));return 1+Math.round(((t-f)/864e5-3+((f.getUTCDay()+6)%7))/7);}
+  function toMin(t){if(!t||!/^\d{1,2}:\d{2}/.test(t))return null;const [h,m]=t.split(":").map(Number);return h*60+m;}
+  function fmtDur(min){if(min==null)return "–";const m=Math.round(min);if(Math.abs(m)<60)return m+" min";const h=Math.floor(m/60),r=m%60;return h+" h"+(r?" "+r+" min":"");}
+  function fmtH(min){return (min/60).toLocaleString("sv-SE",{minimumFractionDigits:1,maximumFractionDigits:1})+" h";}
+  function fmtKr(kr){return Math.round(kr).toLocaleString("sv-SE")+" kr";}
+  function nowHM(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+
+  function calc(e){
+    const s=settings;
+    const ank=toMin(e.ankomst), lo=toMin(e.lunchUt), li=toMin(e.lunchIn), hem=toMin(e.hemgang);
+    const fo=toMin(e.frukostUt), fi=toMin(e.frukostIn);
+    const n=Math.max(1,parseInt(e.antal,10)||1);
+    const lunch=(lo!=null&&li!=null&&li>=lo)?li-lo:null;
+    const lunchCap=Number(s.lunch)||0;
+    const lover=lunch!=null?Math.max(0,lunch-lunchCap):0;
+    const frukost=(fo!=null&&fi!=null&&fi>=fo)?fi-fo:null;
+    const frukostCap=Number(s.frukost)||0;
+    const fover=frukost!=null?Math.max(0,frukost-frukostCap):0;
+    const over=lover+fover;
+    const st=toMin(s.start), en=toMin(s.end);
+    const late=(ank!=null&&st!=null)?Math.max(0,ank-st):0;
+    const early=(hem!=null&&en!=null)?Math.max(0,en-hem):0;
+    const lostPer=over+late+early;
+    const lost=lostPer*n;
+    const kr=lost/60*(Number(s.rate)||0);
+    const worked=(ank!=null&&hem!=null&&hem>ank)?hem-ank-(lunch||0)-(frukost||0):null;
+    return {n,lunch,lover,frukost,fover,over,late,early,lostPer,lost,kr,worked};
+  }
+
+  function weekEntries(){
+    const a=iso(monday), b=iso(addDays(monday,6));
+    return entries.filter(e=>e.date>=a&&e.date<=b);
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    $("siteLabel").textContent=settings.site||"Arbetsplats";
+    const sun=addDays(monday,6);
+    $("wkTitle").textContent="Vecka "+isoWeek(monday);
+    $("wkRange").textContent=monday.getDate()+" "+MONTHS[monday.getMonth()]+" – "+sun.getDate()+" "+MONTHS[sun.getMonth()]+" "+sun.getFullYear();
+
+    const we=weekEntries();
+    let lost=0,kr=0,lunchSum=0,lunchN=0;
+    we.forEach(e=>{const c=calc(e);lost+=c.lost;kr+=c.kr;if(c.lunch!=null){lunchSum+=c.lunch;lunchN++;}});
+    $("kLostH").textContent=loaded?fmtH(lost):"–";
+    $("kLostKr").textContent=loaded?(Number(settings.rate)>0?fmtKr(kr):"Ange timkostnad"):"–";
+    $("kLostKr").style.fontSize=Number(settings.rate)>0?"":"15px";
+    $("kAvgLunch").textContent=loaded&&lunchN?fmtDur(lunchSum/lunchN):"–";
+    $("kCount").textContent=loaded?String(we.length):"–";
+
+    $("tabDay").setAttribute("aria-selected",view==="day");
+    $("tabSum").setAttribute("aria-selected",view==="sum");
+    $("viewDay").hidden=view!=="day";
+    $("viewSum").hidden=view!=="sum";
+    if(view==="day")renderDay(we);else renderSum(we);
+    $("btnAdd").disabled=!db||!canWrite;
+  }
+
+  function renderDay(we){
+    const daysEl=$("days");
+    daysEl.innerHTML="";
+    for(let i=0;i<7;i++){
+      const d=addDays(monday,i), ds=iso(d);
+      const cnt=we.filter(e=>e.date===ds).length;
+      const b=document.createElement("button");
+      b.type="button";b.setAttribute("aria-pressed",i===dayIdx);
+      b.innerHTML="<b>"+DAYS_S[i]+"</b><span>"+d.getDate()+"/"+(d.getMonth()+1)+"</span>"+(cnt?'<span class="dot">'+cnt+"</span>":"");
+      b.addEventListener("click",()=>{dayIdx=i;render();});
+      daysEl.appendChild(b);
+    }
+    const ds=iso(addDays(monday,dayIdx));
+    const list=we.filter(e=>e.date===ds).sort((a,b)=>(a.foretag||"").localeCompare(b.foretag||"","sv")||(a.ankomst||"").localeCompare(b.ankomst||""));
+    const el=$("list");
+    if(!loaded){el.innerHTML='<div class="empty-state">Hämtar data…</div>';return;}
+    if(!list.length){el.innerHTML='<div class="empty-state">Inga registreringar '+DAYS[dayIdx].toLowerCase()+' ännu.<br>Tryck på <b>Lägg till företag</b> när de kommer.</div>';return;}
+    el.innerHTML="";
+    list.forEach(e=>{
+      const c=calc(e);
+      const t=v=>v?'<b>'+esc(v)+'</b>':'<b class="empty">--:--</b>';
+      const chips=[];
+      if(c.frukost!=null)chips.push('<span class="chip '+(c.fover>0?"bad":"good")+'">Frukost '+fmtDur(c.frukost)+(c.fover>0?" (+"+c.fover+" min)":"")+"</span>");
+      if(c.lunch!=null)chips.push('<span class="chip '+(c.lover>0?"bad":"good")+'">Lunch '+fmtDur(c.lunch)+(c.lover>0?" (+"+c.lover+" min)":"")+"</span>");
+      if(c.late>0)chips.push('<span class="chip bad">Sen ankomst '+fmtDur(c.late)+"</span>");
+      if(c.early>0)chips.push('<span class="chip bad">Gick tidigt '+fmtDur(c.early)+"</span>");
+      if(c.lost>0)chips.push('<span class="chip bad">Förlust '+fmtDur(c.lost)+(Number(settings.rate)>0?" · "+fmtKr(c.kr):"")+"</span>");
+      if(c.worked!=null)chips.push('<span class="chip">Arbetat '+fmtDur(c.worked)+(c.n>1?" /pers":"")+"</span>");
+      const b=document.createElement("button");
+      b.type="button";b.className="entry";
+      b.innerHTML='<div class="row1"><span class="co">'+esc(e.foretag||"Okänt företag")+'</span><span class="pp">'+c.n+(c.n===1?" person":" personer")+'</span></div>'+
+        '<div class="times"><div><small>Ankomst</small>'+t(e.ankomst)+'</div><div><small>Frukost ut</small>'+t(e.frukostUt)+'</div><div><small>Frukost in</small>'+t(e.frukostIn)+'</div><div><small>Lunch ut</small>'+t(e.lunchUt)+'</div><div><small>Lunch in</small>'+t(e.lunchIn)+'</div><div><small>Hemgång</small>'+t(e.hemgang)+'</div></div>'+
+        (chips.length?'<div class="chips">'+chips.join("")+"</div>":"")+
+        (e.kommentar?'<div class="note">'+esc(e.kommentar)+"</div>":"");
+      b.addEventListener("click",()=>openEntry(e));
+      el.appendChild(b);
+    });
+  }
+
+  function aggregate(we){
+    const map=new Map();
+    we.forEach(e=>{
+      const key=(e.foretag||"Okänt företag").trim();
+      const k=key.toLowerCase();
+      if(!map.has(k))map.set(k,{name:key,days:new Set(),rows:0,pers:0,lunchSum:0,lunchN:0,frukostSum:0,frukostN:0,fover:0,over:0,late:0,early:0,lost:0,kr:0});
+      const a=map.get(k), c=calc(e);
+      a.days.add(e.date);a.rows++;a.pers+=c.n;
+      if(c.lunch!=null){a.lunchSum+=c.lunch;a.lunchN++;}
+      if(c.frukost!=null){a.frukostSum+=c.frukost;a.frukostN++;}
+      a.fover+=c.fover*c.n;
+      a.over+=c.lover*c.n;a.late+=c.late*c.n;a.early+=c.early*c.n;a.lost+=c.lost;a.kr+=c.kr;
+    });
+    return [...map.values()].sort((a,b)=>b.lost-a.lost||a.name.localeCompare(b.name,"sv"));
+  }
+
+  function renderSum(we){
+    const rows=aggregate(we);
+    const hasRate=Number(settings.rate)>0;
+    const tbl=$("sumTable");
+    if(!loaded){tbl.innerHTML='<tr><td>Hämtar data…</td></tr>';return;}
+    if(!rows.length){tbl.innerHTML='<tr><td class="muted">Inga registreringar den här veckan.</td></tr>';$("sumNote").textContent="";return;}
+    let h='<thead><tr><th>Företag</th><th class="n">Dagar</th><th class="n">Snitt frukost</th><th class="n">Över frukost</th><th class="n">Snitt lunch</th><th class="n">Över lunch</th><th class="n">Sen ankomst</th><th class="n">Gick tidigt</th><th class="n">Förlorad tid</th>'+(hasRate?'<th class="n">Förlust</th>':"")+"</tr></thead><tbody>";
+    const T={days:0,fover:0,over:0,late:0,early:0,lost:0,kr:0,lunchSum:0,lunchN:0,frukostSum:0,frukostN:0};
+    rows.forEach(a=>{
+      T.fover+=a.fover;T.over+=a.over;T.late+=a.late;T.early+=a.early;T.lost+=a.lost;T.kr+=a.kr;T.lunchSum+=a.lunchSum;T.lunchN+=a.lunchN;T.frukostSum+=a.frukostSum;T.frukostN+=a.frukostN;
+      h+="<tr><td><b>"+esc(a.name)+'</b></td><td class="n">'+a.days.size+'</td><td class="n">'+(a.frukostN?fmtDur(a.frukostSum/a.frukostN):"–")+'</td><td class="n">'+fmtDur(a.fover)+'</td><td class="n">'+(a.lunchN?fmtDur(a.lunchSum/a.lunchN):"–")+'</td><td class="n">'+fmtDur(a.over)+'</td><td class="n">'+fmtDur(a.late)+'</td><td class="n">'+fmtDur(a.early)+'</td><td class="n lossv">'+fmtH(a.lost)+"</td>"+(hasRate?'<td class="n lossv">'+fmtKr(a.kr)+"</td>":"")+"</tr>";
+    });
+    h+='<tr class="tot"><td>Totalt</td><td class="n"></td><td class="n">'+(T.frukostN?fmtDur(T.frukostSum/T.frukostN):"–")+'</td><td class="n">'+fmtDur(T.fover)+'</td><td class="n">'+(T.lunchN?fmtDur(T.lunchSum/T.lunchN):"–")+'</td><td class="n">'+fmtDur(T.over)+'</td><td class="n">'+fmtDur(T.late)+'</td><td class="n">'+fmtDur(T.early)+'</td><td class="n lossv">'+fmtH(T.lost)+"</td>"+(hasRate?'<td class="n lossv">'+fmtKr(T.kr)+"</td>":"")+"</tr></tbody>";
+    tbl.innerHTML=h;
+    $("sumNote").textContent="Tider räknas gånger antal personer. Avtalad frukost: "+(Number(settings.frukost)||0)+" min, avtalad lunch: "+(Number(settings.lunch)||0)+" min"+(settings.start?", start "+settings.start:"")+(settings.end?", slut "+settings.end:"")+(hasRate?", timkostnad "+settings.rate+" kr/h per person.":". Ange timkostnad i Inställningar för att se förlust i kronor.");
+  }
+
+  /* ---------- entry sheet ---------- */
+  function fillCoList(){
+    const names=[...new Set(entries.map(e=>(e.foretag||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"sv"));
+    $("coList").innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join("");
+  }
+  function openEntry(e){
+    if(!db){toast("Ingen anslutning – kan inte spara.");return;}
+    editingId=e?e._id:null;
+    $("entryTitle").textContent=e?"Ändra registrering":"Lägg till företag";
+    $("fCo").value=e?e.foretag||"":"";
+    $("fN").value=e?e.antal||1:1;
+    $("fDate").value=e?e.date:iso(addDays(monday,dayIdx));
+    $("fIn").value=e?e.ankomst||"":"";
+    $("fFo").value=e?e.frukostUt||"":"";
+    $("fFi").value=e?e.frukostIn||"":"";
+    $("fLo").value=e?e.lunchUt||"":"";
+    $("fLi").value=e?e.lunchIn||"":"";
+    $("fOut").value=e?e.hemgang||"":"";
+    $("fNote").value=e?e.kommentar||"":"";
+    $("btnDelete").hidden=!e;
+    $("delConfirm").classList.remove("show");
+    fillCoList();
+    $("entryOverlay").classList.add("open");
+    if(!e)setTimeout(()=>$("fCo").focus(),50);
+  }
+  function closeEntry(){$("entryOverlay").classList.remove("open");editingId=null;}
+
+  document.querySelectorAll("[data-now]").forEach(b=>b.addEventListener("click",()=>{$(b.dataset.now).value=nowHM();}));
+  $("btnCancel").addEventListener("click",closeEntry);
+  $("entryOverlay").addEventListener("click",ev=>{if(ev.target.id==="entryOverlay")closeEntry();});
+
+  let saving=false;
+  $("entryForm").addEventListener("submit",async ev=>{
+    ev.preventDefault();
+    if(saving)return;
+    const co=$("fCo").value.trim();
+    if(!co){toast("Skriv vilket företag det gäller.");$("fCo").focus();return;}
+    const lo=toMin($("fLo").value), li=toMin($("fLi").value);
+    if(lo!=null&&li!=null&&li<lo){toast("Lunch in är före lunch ut – kolla tiderna.");return;}
+    const fo=toMin($("fFo").value), fi=toMin($("fFi").value);
+    if(fo!=null&&fi!=null&&fi<fo){toast("Frukost in är före frukost ut – kolla tiderna.");return;}
+    const data={
+      foretag:co,
+      antal:Math.max(1,parseInt($("fN").value,10)||1),
+      date:$("fDate").value||iso(addDays(monday,dayIdx)),
+      ankomst:$("fIn").value||"",
+      frukostUt:$("fFo").value||"",
+      frukostIn:$("fFi").value||"",
+      lunchUt:$("fLo").value||"",
+      lunchIn:$("fLi").value||"",
+      hemgang:$("fOut").value||"",
+      kommentar:$("fNote").value.trim(),
+      updatedAt:new Date().toISOString()
+    };
+    saving=true;
+    try{
+      const ref=editingId?db.collection("entries").doc(editingId):db.collection("entries").doc();
+      await ref.set(data);
+      // jump to the day saved
+      const d=parseIso(data.date);monday=startOfWeek(d);dayIdx=(d.getDay()+6)%7;
+      closeEntry();toast("Sparat");render();
+    }catch(err){handleWriteErr(err);}
+    finally{saving=false;}
+  });
+
+  $("btnDelete").addEventListener("click",()=>$("delConfirm").classList.add("show"));
+  $("btnDelNo").addEventListener("click",()=>$("delConfirm").classList.remove("show"));
+  $("btnDelYes").addEventListener("click",async()=>{
+    if(!editingId)return;
+    try{await db.collection("entries").doc(editingId).delete();closeEntry();toast("Borttagen");}
+    catch(err){handleWriteErr(err);}
+  });
+
+  function handleWriteErr(err){
+    const code=err&&err.code;
+    if(code==="invalid_argument"){canWrite=false;toast("Du har bara läsbehörighet. Be ägaren dela med dig som Contributor.");render();}
+    else if(code==="quota_exceeded"){toast("Databasen är full – ta bort gamla veckor.");}
+    else toast("Kunde inte spara just nu. Försök igen.");
+  }
+
+  /* ---------- settings ---------- */
+  $("btnSettings").addEventListener("click",()=>{
+    $("sSite").value=settings.site||"";
+    $("sLunch").value=settings.lunch!=null?settings.lunch:30;
+    $("sFrukost").value=settings.frukost!=null?settings.frukost:15;
+    $("sRate").value=settings.rate||"";
+    $("sStart").value=settings.start||"";
+    $("sEnd").value=settings.end||"";
+    $("setOverlay").classList.add("open");
+  });
+  $("btnSetCancel").addEventListener("click",()=>$("setOverlay").classList.remove("open"));
+  $("setOverlay").addEventListener("click",ev=>{if(ev.target.id==="setOverlay")$("setOverlay").classList.remove("open");});
+  $("setForm").addEventListener("submit",async ev=>{
+    ev.preventDefault();
+    const next={
+      site:$("sSite").value.trim(),
+      frukost:Math.max(0,parseInt($("sFrukost").value,10)||0),
+      lunch:Math.max(0,parseInt($("sLunch").value,10)||0),
+      rate:Math.max(0,Number($("sRate").value)||0),
+      start:$("sStart").value||"",
+      end:$("sEnd").value||""
+    };
+    if(!db){settings=next;$("setOverlay").classList.remove("open");render();return;}
+    try{await db.doc("settings/main").set(next);settings=next;$("setOverlay").classList.remove("open");toast("Inställningar sparade");render();}
+    catch(err){handleWriteErr(err);}
+  });
+
+  /* ---------- nav ---------- */
+  $("prevWeek").addEventListener("click",()=>{monday=addDays(monday,-7);render();});
+  $("nextWeek").addEventListener("click",()=>{monday=addDays(monday,7);render();});
+  $("tabDay").addEventListener("click",()=>{view="day";render();});
+  $("tabSum").addEventListener("click",()=>{view="sum";render();});
+  $("btnAdd").addEventListener("click",()=>openEntry(null));
+
+  let toastT=null;
+  function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),3200);}
+
+  function banner(kind,msg){$("banner").innerHTML=msg?'<div class="banner '+kind+'">'+msg+"</div>":"";}
+
+  /* ---------- PDF ---------- */
+  let downloads=null;
+  $("btnPdf").addEventListener("click",async()=>{
+    if(!window.jspdf||!window.jspdf.jsPDF){toast("PDF-verktyget kunde inte laddas.");return;}
+    if(!downloads){toast("Nedladdning stöds inte i den här vyn. Öppna sidan i claude.ai.");return;}
+    try{
+      const blob=buildPdf();
+      await downloads.save({filename:"Tidsrapport vecka "+isoWeek(monday)+".pdf",data:blob});
+    }catch(err){
+      if(err&&err.code==="declined")return;
+      toast("Kunde inte spara PDF:en.");
+    }
+  });
+
+  function pdfText(s){return String(s==null?"":s).replace(/[–—]/g,"-").replace(/[^\x20-\xFF\n]/g,"");}
+
+  function buildPdf(){
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
+    const we=weekEntries();
+    const rows=aggregate(we);
+    const hasRate=Number(settings.rate)>0;
+    const sun=addDays(monday,6);
+    const W=doc.internal.pageSize.getWidth();
+    const dark=[31,41,55], acc=[194,65,12];
+
+    doc.setFont("helvetica","bold");doc.setFontSize(20);doc.setTextColor(17,24,39);
+    doc.text(pdfText("Tidsrapport - vecka "+isoWeek(monday)),14,18);
+    doc.setFont("helvetica","normal");doc.setFontSize(11);doc.setTextColor(75,85,99);
+    doc.text(pdfText((settings.site?settings.site+"  |  ":"")+monday.getDate()+" "+MONTHS[monday.getMonth()]+" - "+sun.getDate()+" "+MONTHS[sun.getMonth()]+" "+sun.getFullYear()),14,25);
+    const basis="Underlag: avtalad frukost "+(Number(settings.frukost)||0)+" min, avtalad lunch "+(Number(settings.lunch)||0)+" min"+(settings.start?", arbetsdagen börjar "+settings.start:"")+(settings.end?", slutar "+settings.end:"")+(hasRate?", timkostnad "+settings.rate+" kr/h per person":"")+".";
+    doc.text(pdfText(basis),14,31);
+
+    // KPI boxes
+    let T={lost:0,kr:0,over:0,fover:0,late:0,early:0};
+    rows.forEach(a=>{T.lost+=a.lost;T.kr+=a.kr;T.over+=a.over;T.fover+=a.fover;T.late+=a.late;T.early+=a.early;});
+    const boxes=[["Förlorad tid",fmtH(T.lost)],["Över frukost",fmtH(T.fover)],["Över lunch",fmtH(T.over)],["Sen ankomst + tidig hemgång",fmtH(T.late+T.early)]];
+    if(hasRate)boxes.push(["Beräknad förlust",fmtKr(T.kr)]);
+    const bw=(W-28-(boxes.length-1)*4)/boxes.length;
+    boxes.forEach((b,i)=>{
+      const x=14+i*(bw+4);
+      doc.setDrawColor(209,213,219);doc.setFillColor(248,249,250);doc.roundedRect(x,36,bw,18,2,2,"FD");
+      doc.setFontSize(8);doc.setTextColor(75,85,99);doc.text(pdfText(b[0].toUpperCase()),x+4,42);
+      doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(...(i===0||i===4?acc:[17,24,39]));doc.text(pdfText(b[1]),x+4,50.5);
+      doc.setFont("helvetica","normal");
+    });
+
+    // Summary per company
+    const head1=["Företag","Dagar","Snitt frukost","Över frukost","Snitt lunch","Över lunch","Sen ankomst","Gick tidigt","Förlorad tid"];
+    if(hasRate)head1.push("Förlust");
+    const body1=rows.map(a=>{const r=[a.name,String(a.days.size),a.frukostN?fmtDur(a.frukostSum/a.frukostN):"-",fmtDur(a.fover),a.lunchN?fmtDur(a.lunchSum/a.lunchN):"-",fmtDur(a.over),fmtDur(a.late),fmtDur(a.early),fmtH(a.lost)];if(hasRate)r.push(fmtKr(a.kr));return r.map(pdfText);});
+    const foot1=["Totalt","","",fmtDur(T.fover),"",fmtDur(T.over),fmtDur(T.late),fmtDur(T.early),fmtH(T.lost)];if(hasRate)foot1.push(fmtKr(T.kr));
+    doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(17,24,39);
+    doc.text(pdfText("Sammanställning per företag"),14,63);
+    const cs1={};for(let i=1;i<head1.length;i++)cs1[i]={halign:"right"};
+    cs1[8]={halign:"right",textColor:acc,fontStyle:"bold"};if(hasRate)cs1[9]={halign:"right",textColor:acc,fontStyle:"bold"};
+    doc.autoTable({
+      startY:66,head:[head1.map(pdfText)],body:body1.length?body1:[[pdfText("Inga registreringar")].concat(new Array(head1.length-1).fill(""))],foot:[foot1.map(pdfText)],
+      theme:"grid",styles:{font:"helvetica",fontSize:10,cellPadding:2.2,lineColor:[209,213,219],lineWidth:0.2,textColor:[17,24,39]},
+      headStyles:{fillColor:dark,textColor:255,fontStyle:"bold"},footStyles:{fillColor:[243,244,246],textColor:[17,24,39],fontStyle:"bold"},
+      columnStyles:cs1,
+      margin:{left:14,right:14}
+    });
+
+    // Details per day
+    const head2=["Dag","Företag","Pers.","Ankomst","Frukost ut","Frukost in","Över frukost","Lunch ut","Lunch in","Över lunch","Hemgång","Förlorad tid"];
+    if(hasRate)head2.push("Förlust");
+    head2.push("Kommentar");
+    const body2=[];
+    for(let i=0;i<7;i++){
+      const ds=iso(addDays(monday,i));
+      we.filter(e=>e.date===ds).sort((a,b)=>(a.foretag||"").localeCompare(b.foretag||"","sv")).forEach(e=>{
+        const c=calc(e);
+        const r=[DAYS_S[i]+" "+addDays(monday,i).getDate()+"/"+(addDays(monday,i).getMonth()+1),e.foretag||"",String(c.n),e.ankomst||"-",e.frukostUt||"-",e.frukostIn||"-",c.fover?"+"+c.fover+" min":"-",e.lunchUt||"-",e.lunchIn||"-",c.lover?"+"+c.lover+" min":"-",e.hemgang||"-",c.lost?fmtDur(c.lost):"-"];
+        if(hasRate)r.push(c.kr?fmtKr(c.kr):"-");
+        r.push(e.kommentar||"");
+        body2.push(r.map(pdfText));
+      });
+    }
+    doc.addPage();
+    doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(17,24,39);
+    doc.text(pdfText("Alla registreringar - vecka "+isoWeek(monday)),14,16);
+    doc.autoTable({
+      startY:20,head:[head2.map(pdfText)],body:body2.length?body2:[[pdfText("Inga registreringar")].concat(new Array(head2.length-1).fill(""))],
+      theme:"grid",styles:{font:"helvetica",fontSize:8,cellPadding:1.5,lineColor:[209,213,219],lineWidth:0.2,textColor:[17,24,39]},
+      headStyles:{fillColor:dark,textColor:255,fontStyle:"bold"},
+      columnStyles:{2:{halign:"right"},6:{halign:"right",textColor:acc},9:{halign:"right",textColor:acc},11:{halign:"right",textColor:acc,fontStyle:"bold"},12:hasRate?{halign:"right",textColor:acc,fontStyle:"bold"}:{}},
+      margin:{left:14,right:14}
+    });
+
+    const pages=doc.internal.getNumberOfPages();
+    for(let p=1;p<=pages;p++){
+      doc.setPage(p);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(107,114,128);
+      doc.text(pdfText("Tider räknas gånger antal personer. Skapad "+iso(new Date())+".  Sida "+p+" av "+pages),14,doc.internal.pageSize.getHeight()-8);
+    }
+    return doc.output("blob");
+  }
+
+  /* ---------- data ---------- */
+  render();
+  (async function init(){
+    if(!window.claude||!window.claude.use){banner("err","Den här sidan behöver öppnas i Claude för att kunna spara.");loaded=true;render();return;}
+    claude.use("downloads").then(d=>{downloads=d;$("btnPdf").hidden=!d;}).catch(()=>{$("btnPdf").hidden=true;});
+    try{db=await claude.use("db");}catch(e){db=null;}
+    if(!db){banner("err","Kan inte ansluta till den delade lagringen. Logga in i Claude, eller be ägaren dela sidan med dig.");loaded=true;render();return;}
+    let gotEntries=false;
+    const timer=setTimeout(()=>{if(!gotEntries)banner("warn","Det tar tid att hämta data – kolla uppkopplingen.");},10000);
+    db.doc("settings/main").onSnapshot(s=>{
+      if(s.exists){settings={...DEFAULTS,...s.data()};}
+      render();
+    },()=>{});
+    db.collection("entries").onSnapshot(snap=>{
+      entries=snap.docs.map(d=>({...d.data(),_id:d.id}));
+      if(!snap.metadata.fromCache){gotEntries=true;clearTimeout(timer);banner("","");}
+      loaded=true;render();
+    },err=>{clearTimeout(timer);loaded=true;banner("err","Anslutningen bröts. Ladda om sidan.");render();});
+  })();
+})();
+</script>
+</body>
+</html>
